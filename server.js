@@ -3,14 +3,19 @@ import express from 'express';
 import cors from 'cors';
 import { apiReference } from '@scalar/express-api-reference';
 import { scrapePlayerProfile, scrapeMatchHistory, scrapePlayerFriends, scrapePlayerStats, scrapePlayerGamemodeStats, scrapeLeaderboardBatch, scrapeLeaderboardPlacement, scrapeClub, scrapeClubByPlayer, GAMEMODE_SLUGS } from './src/scraper.js';
-import { assertAuthConfiguration, requireApiKey } from './src/auth.js';
+import { applyRateLimit } from './src/auth.js';
 import { createOpenApiDocument } from './src/openapi.js';
 
 const app = express();
 const PORT = Number(process.env.PORT || process.env.API_PORT || 4000);
 const API_BASE_URL = process.env.API_BASE_URL || `http://localhost:${PORT}`;
 
-assertAuthConfiguration();
+const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS || 0);
+if (!Number.isSafeInteger(trustProxyHops) || trustProxyHops < 0) {
+  throw new Error('TRUST_PROXY_HOPS must be a non-negative integer.');
+}
+
+app.set('trust proxy', trustProxyHops);
 
 app.use(cors());
 app.use(express.json());
@@ -52,7 +57,7 @@ app.get('/', (req, res) => {
     version: 'v1',
     documentation: '/docs',
     openapi: '/openapi.json',
-    authentication: 'Send an API-Key request header with every /v1 request.',
+    authentication: 'API-Key is optional. Requests without one are limited to 60 per five minutes per IP address.',
     endpoints: [
       'GET /v1/player/:name',
       'GET /v1/status/:name',
@@ -80,7 +85,7 @@ app.use('/docs', apiReference({
   pageTitle: 'Minemen Club API Reference',
 }));
 
-app.use('/v1', requireApiKey);
+app.use('/v1', applyRateLimit);
 
 // Full player profile
 app.get('/v1/player/:name', async (req, res) => {

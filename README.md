@@ -10,7 +10,7 @@ On a VPS with Docker and Compose installed:
 git clone https://github.com/adoringlol/minemen-club-api.git minemen-club-api
 cd minemen-club-api
 cp .env.example .env
-# Edit .env and set API_KEYS to a long, unique secret.
+# API keys are optional. Edit .env only if you want custom key limits.
 docker compose up -d --build
 ```
 
@@ -38,7 +38,6 @@ To run without Compose:
 ```bash
 docker build -t minemen-club-api .
 docker run -d --name minemen-club-api --restart unless-stopped -p 4000:4000 \
-  -e API_KEYS="replace-with-a-long-random-secret" \
   -v minemen-api-data:/app/data \
   -v minemen-api-logs:/app/logs \
   minemen-club-api
@@ -53,9 +52,15 @@ npm ci
 npm start
 ```
 
-## Authentication and rate limits
+## Rate limits and optional API keys
 
-Every `/v1` endpoint requires an `API-Key` request header. The documentation page is public so users can enter their key in Scalar's authentication panel and try endpoints directly.
+No API key is required. Requests without an `API-Key` are rate-limited per client IP address to **60 requests every 5 minutes**.
+
+```bash
+curl http://YOUR_VPS_IP:4000/v1/status/PlayerName
+```
+
+API keys are optional and are useful when you want to give a user a custom limit:
 
 ```bash
 curl -H "API-Key: your-secret-key" http://YOUR_VPS_IP:4000/v1/status/PlayerName
@@ -64,16 +69,21 @@ curl -H "API-Key: your-secret-key" http://YOUR_VPS_IP:4000/v1/status/PlayerName
 Configure these values in `.env`:
 
 ```dotenv
-# One key, or multiple comma-separated keys.
+# Optional: one key, or multiple comma-separated keys.
 API_KEYS=replace-with-a-long-random-secret
 # Optional per-key override. Format: api-key=requests-per-window
 API_KEY_LIMITS=partner-key=120
 # Maximum requests each key can make in a time window.
 RATE_LIMIT_MAX=60
 RATE_LIMIT_WINDOW_SECONDS=60
+# Anonymous requests without an API key: 60 requests per 5 minutes per client IP.
+ANONYMOUS_RATE_LIMIT_MAX=60
+ANONYMOUS_RATE_LIMIT_WINDOW_SECONDS=300
+# Set to 1 when the API is behind one trusted reverse proxy such as Nginx.
+TRUST_PROXY_HOPS=0
 ```
 
-Keys not listed in `API_KEY_LIMITS` use `RATE_LIMIT_MAX`; the custom limit still uses the shared `RATE_LIMIT_WINDOW_SECONDS` window. For example, the above makes `partner-key` eligible for 120 requests per 60 seconds, while other keys receive 60.
+Keys not listed in `API_KEY_LIMITS` use `RATE_LIMIT_MAX`; the custom limit still uses the shared `RATE_LIMIT_WINDOW_SECONDS` window. For example, the above makes `partner-key` eligible for 120 requests per 60 seconds. Sending an invalid API key returns `401`; omit the header to use the anonymous limit instead.
 
 ## Create a key with a custom limit
 
@@ -86,17 +96,19 @@ docker compose up -d
 
 The command prints the new key once, adds it to both `API_KEYS` and `API_KEY_LIMITS`, and sets its limit to 120 requests per window. Save the printed key securely and give it to the intended user. To revoke a key, remove it from both variables in `.env`, then restart the container.
 
-Each successful authenticated response includes:
+Anonymous responses include:
 
 ```text
-RateLimit: 60;w=60
+RateLimit: 60;w=300
 RateLimit-Remaining: 59
 ```
+
+Responses made with an API key display that key’s own configured limit instead.
 
 When a key reaches its quota, the API returns `429 Too Many Requests` and includes:
 
 ```text
-RateLimit: 60;w=60
+RateLimit: 60;w=300
 RateLimit-Remaining: 0
 Retry-After: 42
 ```

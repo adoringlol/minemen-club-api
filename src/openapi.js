@@ -14,11 +14,11 @@ const modernGamemodes = [
 
 const responseHeaders = {
   RateLimit: {
-    description: 'Maximum requests for the authenticated key in the current window, followed by the window length in seconds.',
+    description: 'Maximum requests for the current API key or anonymous client IP in the current window, followed by the window length in seconds.',
     schema: { type: 'string', example: '60;w=60' },
   },
   'RateLimit-Remaining': {
-    description: 'Requests remaining for the authenticated key in the current rate-limit window.',
+    description: 'Requests remaining for this API key or anonymous client IP in the current rate-limit window.',
     schema: { type: 'integer', example: 59 },
   },
 };
@@ -52,16 +52,16 @@ function errorResponse(description, status, example) {
 }
 
 const standardErrors = {
-  401: errorResponse('The `API-Key` header is missing or does not match a configured key.', 401, {
+  401: errorResponse('The supplied optional `API-Key` header does not match a configured key.', 401, {
     error: 'Unauthorized',
-    message: 'Provide a valid API-Key request header.',
+    message: 'The supplied API-Key is not valid. Omit the header to use the anonymous rate limit.',
   }),
   429: {
-    description: 'The API key has exhausted its configured quota for the current window.',
+    description: 'The API key or anonymous client IP has exhausted its configured quota for the current window.',
     headers: {
       ...responseHeaders,
       'Retry-After': {
-        description: 'Number of seconds until the API key may make another request.',
+        description: 'Number of seconds until the API key or anonymous client IP may make another request.',
         schema: { type: 'integer', example: 42 },
       },
     },
@@ -103,7 +103,7 @@ function operation({ summary, description, parameters = [], schema, example, err
   return {
     summary,
     description,
-    security: apiKeySecurity,
+    security: [...apiKeySecurity, {}],
     parameters,
     responses: {
       200: jsonResponse('Successful response.', schema, example),
@@ -122,9 +122,9 @@ export function createOpenApiDocument(serverUrl) {
       description: [
         'Read-only API for Minemen Club player profiles, matches, practice statistics, leaderboards, and clubs.',
         '',
-        'Every `/v1` request requires the `API-Key` header. Responses may be served from a 30-second in-memory cache; cached data is identified by an optional `cached: true` field.',
+        'The `API-Key` header is optional. Requests without a key are limited to 60 requests every five minutes per client IP address. A valid key can use its configured custom limit. Responses may be served from a 30-second in-memory cache; cached data is identified by an optional `cached: true` field.',
         '',
-        'Use the **Authenticate** button in Scalar to enter your API key, then use **Send Request** on any endpoint.',
+        'Use the **Authenticate** button in Scalar to enter an optional API key with a custom limit, then use **Send Request** on any endpoint.',
       ].join('\n'),
     },
     servers: [{ url: serverUrl, description: 'Configured API base URL.' }],
@@ -312,7 +312,7 @@ export function createOpenApiDocument(serverUrl) {
           type: 'apiKey',
           in: 'header',
           name: 'API-Key',
-          description: 'Use one of the keys configured in `API_KEYS`. Per-key limits can be configured with `API_KEY_LIMITS`.',
+          description: 'Optional. Without a key, requests are limited per IP address. Use a configured key for its custom limit; per-key limits are configured with `API_KEY_LIMITS`.',
         },
       },
       schemas: {
