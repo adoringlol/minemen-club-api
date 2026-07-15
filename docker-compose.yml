@@ -7,6 +7,9 @@ services:
       - "4000:4000"
     environment:
       PORT: 4000
+      API_KEYS: "${API_KEYS:?Set API_KEYS in .env before starting}"
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-60}
+      RATE_LIMIT_WINDOW_SECONDS: ${RATE_LIMIT_WINDOW_SECONDS:-60}
       # Set API_BASE_URL in .env if you use /v1/generator/:name.
       API_BASE_URL: ${API_BASE_URL:-http://localhost:4000}
     volumes:

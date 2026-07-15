@@ -1,10 +1,16 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import { apiReference } from '@scalar/express-api-reference';
 import { scrapePlayerProfile, scrapeMatchHistory, scrapePlayerFriends, scrapePlayerStats, scrapePlayerGamemodeStats, scrapeLeaderboardBatch, scrapeLeaderboardPlacement, scrapeClub, scrapeClubByPlayer, GAMEMODE_SLUGS } from './src/scraper.js';
+import { assertAuthConfiguration, requireApiKey } from './src/auth.js';
+import { createOpenApiDocument } from './src/openapi.js';
 
 const app = express();
 const PORT = Number(process.env.PORT || process.env.API_PORT || 4000);
+const API_BASE_URL = process.env.API_BASE_URL || `http://localhost:${PORT}`;
+
+assertAuthConfiguration();
 
 app.use(cors());
 app.use(express.json());
@@ -44,6 +50,9 @@ app.get('/', (req, res) => {
   res.json({
     name: 'Minemen Club API',
     version: 'v1',
+    documentation: '/docs',
+    openapi: '/openapi.json',
+    authentication: 'Send an API-Key request header with every /v1 request.',
     endpoints: [
       'GET /v1/player/:name',
       'GET /v1/status/:name',
@@ -60,6 +69,18 @@ app.get('/', (req, res) => {
     ],
   });
 });
+
+app.get('/openapi.json', (req, res) => {
+  res.json(createOpenApiDocument(API_BASE_URL));
+});
+
+app.use('/docs', apiReference({
+  theme: 'purple',
+  url: '/openapi.json',
+  pageTitle: 'Minemen Club API Reference',
+}));
+
+app.use('/v1', requireApiKey);
 
 // Full player profile
 app.get('/v1/player/:name', async (req, res) => {
@@ -223,7 +244,7 @@ app.get('/v1/clubs/player/:name', async (req, res) => {
 // Generator — list all player-scoped endpoints for a given player name
 app.get('/v1/generator/:name', (req, res) => {
   const player = normalize(req.params.name);
-  const base = process.env.API_BASE_URL || `http://localhost:${PORT}`;
+  const base = API_BASE_URL;
 
   const endpoints = [
     { description: 'Full player profile',            path: `/v1/player/${player}` },

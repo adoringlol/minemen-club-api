@@ -7,12 +7,13 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check src/scraper.js"
+    "check": "node --check server.js && node --check src/scraper.js && node --check src/auth.js && node --check src/openapi.js"
   },
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
+    "@scalar/express-api-reference": "^0.10.9",
     "cheerio": "^1.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
