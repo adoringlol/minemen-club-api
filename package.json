@@ -7,7 +7,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check src/scraper.js && node --check src/auth.js && node --check src/openapi.js"
+    "key:create": "node scripts/create-api-key.js",
+    "check": "node --check server.js && node --check src/scraper.js && node --check src/auth.js && node --check src/openapi.js && node --check scripts/create-api-key.js"
   },
   "engines": {
     "node": ">=20"

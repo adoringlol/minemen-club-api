@@ -116,7 +116,7 @@ export function createOpenApiDocument(serverUrl) {
           type: 'apiKey',
           in: 'header',
           name: 'API-Key',
-          description: 'Use one of the keys configured in `API_KEYS`.',
+          description: 'Use one of the keys configured in `API_KEYS`. Per-key limits can be configured with `API_KEY_LIMITS`.',
         },
       },
       schemas: {

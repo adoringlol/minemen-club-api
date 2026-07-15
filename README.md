@@ -66,10 +66,25 @@ Configure these values in `.env`:
 ```dotenv
 # One key, or multiple comma-separated keys.
 API_KEYS=replace-with-a-long-random-secret
+# Optional per-key override. Format: api-key=requests-per-window
+API_KEY_LIMITS=partner-key=120
 # Maximum requests each key can make in a time window.
 RATE_LIMIT_MAX=60
 RATE_LIMIT_WINDOW_SECONDS=60
 ```
+
+Keys not listed in `API_KEY_LIMITS` use `RATE_LIMIT_MAX`; the custom limit still uses the shared `RATE_LIMIT_WINDOW_SECONDS` window. For example, the above makes `partner-key` eligible for 120 requests per 60 seconds, while other keys receive 60.
+
+## Create a key with a custom limit
+
+On the VPS, from the repository folder, create a cryptographically secure key and add it to `.env` in one command:
+
+```bash
+npm run key:create -- --limit 120
+docker compose up -d
+```
+
+The command prints the new key once, adds it to both `API_KEYS` and `API_KEY_LIMITS`, and sets its limit to 120 requests per window. Save the printed key securely and give it to the intended user. To revoke a key, remove it from both variables in `.env`, then restart the container.
 
 Each successful authenticated response includes:
 
