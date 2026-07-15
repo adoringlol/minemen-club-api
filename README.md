@@ -7,7 +7,7 @@ Standalone Express API for Minemen Club player profiles, status, matches, friend
 On a VPS with Docker and Compose installed:
 
 ```bash
-git clone <your-github-repository-url> minemen-club-api
+git clone https://github.com/adoringlol/minemen-club-api.git minemen-club-api
 cd minemen-club-api
 docker compose up -d --build
 ```
